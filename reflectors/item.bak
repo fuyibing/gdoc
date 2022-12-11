@@ -1,0 +1,20 @@
+// author: wsfuyibing <websearch@163.com>
+// date: 2022-12-07
+
+package reflectors
+
+type (
+// Item
+// 导出元素.
+// Item struct {
+// 	Array       bool    `json:"array"`
+// 	Children    []*Item `json:"children,omitempty"`
+// 	Description string  `json:"description"`
+// 	Key         string  `json:"name"`
+// 	Label       string  `json:"label"`
+// 	Mock        string  `json:"mock,omitempty"`
+// 	Required    bool    `json:"required"`
+// 	Type        string  `json:"type"`
+// 	Validation  string  `json:"validation"`
+// }
+)
