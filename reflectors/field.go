@@ -1,5 +1,5 @@
 // author: wsfuyibing <websearch@163.com>
-// date: 2022-12-06
+// date: 2022-12-12
 
 package reflectors
 
@@ -7,257 +7,232 @@ import (
 	"fmt"
 	"github.com/fuyibing/gdoc/base"
 	"reflect"
+	"regexp"
 	"strconv"
 )
 
 type (
 	// Field
-	// 字段接口.
-	Field interface {
-		Block() Block
-		Export() interface{}
-		GetDescription() string
-		GetKey() string
-		GetLabel() string
-		GetMock() string
-		GetSortKey() string
-		GetTypeName() string
-		GetValidation() string
-		IsArray() bool
-		IsExec() bool
-		IsRequired() bool
-		IsSystemType() bool
-		Item() *base.Item
-		Parse(v reflect.Value, sf reflect.StructField) error
-	}
+	// 反射字段.
+	Field struct {
+		s     *Struct
+		child *Struct
+		mock  string
 
-	// 结构块.
-	field struct {
-		block Block
-
-		isArray      bool // 是否为数组
-		isExec       bool // 是否计算属性
-		isRequired   bool // 是否必须
-		isSystemType bool // 是否为系统类型
-
-		child        Block       // 子类型.
-		description  string      // 字段描述
-		defaultValue interface{} // 默认值.
-		key          string      // 字段键名, 如: user
-		label        string      // 标签名称, 如: 邮箱地址
-		mock         string      // 防造数据, 如: websearch@163.com
-		typeName     string      // 类型名称, 如: int
-		validation   string      // 校验选项
+		Array              bool
+		Condition          string
+		Ignored            bool
+		Key, Name          string
+		Kind               FieldKind
+		Label, Description string
+		Required           bool
+		Type               string
+		Value              interface{}
 	}
 )
 
-func NewField(block Block) Field {
-	return (&field{block: block}).
-		init()
+func NewField(s *Struct, sf reflect.StructField) *Field {
+	return (&Field{s: s}).init(&sf)
 }
 
-// /////////////////////////////////////////////////////////////
-// Interface methods
-// /////////////////////////////////////////////////////////////
+func (o *Field) Item() *base.Item {
+	item := &base.Item{
+		Array:       o.Array,
+		Condition:   o.Condition,
+		Description: o.Description,
+		Ignored:     o.Ignored,
+		Key:         o.Key,
+		Kind:        int(o.Kind),
+		Label:       o.Label,
+		Name:        o.Name,
+		Required:    o.Required,
+		Type:        o.Type,
+		Value:       o.Value,
+	}
+	if o.child != nil {
+		item.Children = o.child.Items()
+	}
+	return item
+}
 
-func (o *field) Block() Block                                        { return o.block }
-func (o *field) Export() interface{}                                 { return o.export() }
-func (o *field) GetDescription() string                              { return o.description }
-func (o *field) GetKey() string                                      { return o.key }
-func (o *field) GetLabel() string                                    { return o.label }
-func (o *field) GetMock() string                                     { return o.mock }
-func (o *field) GetSortKey() string                                  { return o.sortKey() }
-func (o *field) GetTypeName() string                                 { return o.typeName }
-func (o *field) GetValidation() string                               { return o.validation }
-func (o *field) IsArray() bool                                       { return o.isArray }
-func (o *field) IsExec() bool                                        { return o.isExec }
-func (o *field) IsRequired() bool                                    { return o.isRequired }
-func (o *field) IsSystemType() bool                                  { return o.isSystemType }
-func (o *field) Item() *base.Item                                    { return o.item() }
-func (o *field) Parse(v reflect.Value, sf reflect.StructField) error { return o.parse(v, sf) }
+func (o *Field) Map() interface{} {
+	if o.Array {
+		if o.child != nil {
+			return []interface{}{
+				o.child.Map(),
+			}
+		}
+		return []interface{}{
+			o.Value,
+		}
+	}
 
-// /////////////////////////////////////////////////////////////
-// Initialize
-// /////////////////////////////////////////////////////////////
+	if o.child != nil {
+		return o.child.Map()
+	}
 
-func (o *field) init() *field {
+	return o.Value
+}
+
+func (o *Field) Parse(v reflect.Value) error {
+	// 结构体嵌套.
+	if v.Kind() == reflect.Struct {
+		o.child = NewStruct(o.s.reflection)
+		return o.child.Iterate(v)
+	}
+
+	// 指针转结构体.
+	if v.Kind() == reflect.Ptr {
+		return o.Parse(reflect.New(v.Type().Elem()).Elem())
+	}
+
+	// 切片转结构体.
+	if v.Kind() == reflect.Slice {
+		o.Array = true
+		return o.Parse(reflect.New(v.Type().Elem()).Elem())
+	}
+
+	// MAP类型.
+	if v.Kind() == reflect.Map {
+		o.Type = "object"
+		o.Value = make(map[interface{}]interface{})
+		return nil
+	}
+
+	// 系统类型.
+	//
+	// - reflect.Uintptr
+	// - reflect.Complex64
+	// - reflect.Complex128
+	// - reflect.Array
+	// - reflect.Chan
+	// - reflect.Func
+	// - reflect.UnsafePointer
+	switch v.Kind() {
+	case reflect.Interface:
+		o.Value = "*"
+
+	case reflect.Bool:
+		o.Value = false
+
+	case reflect.Float32, reflect.Float64:
+		o.Value = 0
+
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		o.Value = 0
+
+	case reflect.String:
+		o.Value = ""
+	}
+
+	o.Type = v.Kind().String()
+	o.parseMock()
+	return nil
+}
+
+func (o *Field) SortKey() string {
+	if o.Required {
+		return fmt.Sprintf("0_%s", o.Key)
+	}
+	return fmt.Sprintf("1_%s", o.Key)
+}
+
+func (o *Field) init(sf *reflect.StructField) *Field {
+	// 默认名.
+	o.Name = sf.Name
+	o.Key = sf.Name
+	o.Kind = FieldJson
+
+	// 自定义.
+	for kind, tag := range map[FieldKind]string{
+		FieldJson: "json",
+		FieldForm: "form",
+		FieldUrl:  "url",
+	} {
+		if s := sf.Tag.Get(tag); s != "" {
+			o.Kind = kind
+			o.Key = s
+		}
+	}
+
+	// 子集.
+	o.initDesc(sf)
+	o.initLabel(sf)
+	o.initMock(sf)
+	o.initIgnore()
+	o.initValidate(sf)
 	return o
 }
 
-// /////////////////////////////////////////////////////////////
-// Access methods
-// /////////////////////////////////////////////////////////////
-
-func (o *field) export() interface{} {
-	// 1. 系统类型.
-	//    当值类型为系统类型时, 此时为最细颗粒度.
-	if o.isSystemType {
-		// 1.1 数组.
-		if o.isArray {
-			return []interface{}{
-				o.defaultValue,
-			}
-		}
-
-		// 1.2 默认.
-		return o.defaultValue
-	}
-
-	// 2. 用户类型.
-	//    当指定类型非系统时(结构体).
-	if o.isArray {
-		return []interface{}{
-			o.child.Export(),
-		}
-	}
-
-	// 3. 子类型.
-	return o.child.Export()
-}
-
-func (o *field) item() *base.Item {
-	it := &base.Item{
-		// Key:         o.key,
-		// Array:       o.isArray,
-		// Type:        o.typeName,
-		// Required:    o.isRequired,
-		// Validation:  o.validation,
-		// Description: o.description,
-		// Label:       o.label,
-		// Mock:        o.mock,
-	}
-	if o.child != nil {
-		it.Children = o.child.ToList()
-	}
-	return it
-}
-
-func (o *field) parse(v reflect.Value, sf reflect.StructField) error {
-	o.label = sf.Name
-	o.key = sf.Name
-
-	o.parseKey(sf)
-	o.parseTag(sf)
-	o.parseValidate(sf)
-
-	return o.parseType(v)
-}
-
-func (o *field) parseKey(sf reflect.StructField) {
-	if s := sf.Tag.Get(TagJson); s != "" {
-		if s == TagIgnored {
-			s = ""
-		}
-		o.key = s
+func (o *Field) initDesc(sf *reflect.StructField) {
+	if s := sf.Tag.Get("desc"); s != "" {
+		o.Description = s
 	}
 }
 
-func (o *field) parseTag(sf reflect.StructField) {
-	// 1. 标签名称.
-	if s := sf.Tag.Get(TagLabel); s != "" {
-		o.label = s
+func (o *Field) initIgnore() {
+	if o.Key == "-" {
+		o.Ignored = true
 	}
+}
 
-	// 2. 字段描述.
-	if s := sf.Tag.Get(TagDescription); s != "" {
-		o.description = s
+func (o *Field) initLabel(sf *reflect.StructField) {
+	o.Label = o.Name
+	if s := sf.Tag.Get("label"); s != "" {
+		o.Label = s
 	}
+}
 
-	// 3. 计算属性.
-	if s := sf.Tag.Get(TagExec); s != "" {
-		o.isExec, _ = strconv.ParseBool(s)
-	}
-
-	// 4. 模拟数据.
-	if s := sf.Tag.Get(TagMock); s != "" {
+func (o *Field) initMock(sf *reflect.StructField) {
+	if s := sf.Tag.Get("mock"); s != "" {
 		o.mock = s
 	}
 }
 
-func (o *field) parseType(v reflect.Value) (err error) {
-	o.isSystemType = true
+func (o *Field) initValidate(sf *reflect.StructField) {
+	if s := sf.Tag.Get("validate"); s != "" {
+		if regexp.MustCompile(`required`).MatchString(s) {
+			o.Required = true
 
-	switch v.Kind() {
-	case reflect.Struct:
-		{
-			o.child = NewBlock(o.block.Reflection())
-			o.isSystemType = false
-			o.typeName = "object"
-
-			if err = o.child.Parse(v); err != nil {
-				return err
-			}
+			s = regexp.MustCompile(`,\s*required`).ReplaceAllString(s, "")
+			s = regexp.MustCompile(`required\s*,\s*`).ReplaceAllString(s, "")
 		}
-
-	case reflect.Ptr, reflect.Slice:
-		{
-			if v.Kind() == reflect.Slice {
-				o.isArray = true
-			}
-			if err = o.parseType(reflect.New(v.Type().Elem()).Elem()); err != nil {
-				return err
-			}
-		}
-
-	case reflect.Bool:
-		{
-			o.defaultValue = DefaultBoolValue
-			o.typeName = "bool"
-		}
-
-	case reflect.Float32, reflect.Float64:
-		{
-			o.defaultValue = DefaultFloatValue
-			o.typeName = "float"
-		}
-
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
-		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		{
-			o.defaultValue = DefaultIntValue
-			o.typeName = "int"
-		}
-
-	case reflect.String:
-		{
-			o.defaultValue = DefaultStringValue
-			o.typeName = "string"
-		}
-
-	case reflect.Interface:
-		{
-			o.defaultValue = DefaultInterfaceValue
-			o.typeName = "*"
-		}
-
-	case reflect.Map:
-		{
-			o.defaultValue = DefaultMapValue
-			o.typeName = "map"
-		}
-
-	default:
-		err = ErrUnknownType
+		o.Condition = s
 	}
-	return
 }
 
-func (o *field) parseValidate(sf reflect.StructField) {
-	s := sf.Tag.Get(TagValidate)
-
-	if s == "" {
+func (o *Field) parseMock() {
+	if o.mock == "" {
 		return
 	}
 
-	if RegexpFieldValidate.MatchString(s) {
-		o.isRequired = true
-		o.validation = RegexpFieldValidate.ReplaceAllString(s, "")
+	if o.Type == "bool" {
+		if n, err := strconv.ParseBool(o.mock); err == nil {
+			o.Value = n
+		}
 	}
-}
 
-func (o *field) sortKey() string {
-	if o.isRequired {
-		return fmt.Sprintf("0_%s", o.key)
+	if regexp.MustCompile(`^float`).MatchString(o.Type) {
+		if n, err := strconv.ParseFloat(o.mock, 64); err == nil {
+			o.Value = n
+		}
 	}
-	return fmt.Sprintf("1_%s", o.key)
+
+	if regexp.MustCompile(`^int`).MatchString(o.Type) {
+		if n, err := strconv.ParseInt(o.mock, 0, 64); err == nil {
+			o.Value = n
+		}
+	}
+
+	if regexp.MustCompile(`^uint`).MatchString(o.Type) {
+		if n, err := strconv.ParseUint(o.mock, 0, 64); err == nil {
+			o.Value = n
+		}
+	}
+
+	if o.Type == "string" {
+		o.Value = o.mock
+		return
+	}
 }

@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	basePath = "/Users/fuyibing/codes/git.uniondrug.com/gs-fin-es"
-	// basePath = "/Users/fuyibing/codes/git.uniondrug.com/gs-fin-monitor"
+	// basePath = "/Users/fuyibing/codes/git.uniondrug.com/gs-fin-es"
+	basePath = "/Users/fuyibing/codes/git.uniondrug.com/gs-fin-monitor"
 )
 
 func init() {
