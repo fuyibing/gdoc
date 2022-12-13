@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"regexp"
 	"sort"
+	"strings"
 	"sync/atomic"
 )
 
@@ -70,17 +71,48 @@ func (o *compile) configure() error {
 // /////////////////////////////////////////////////////////////
 
 func (o *compile) install() error {
-	src := fmt.Sprintf("%s%s%s/main.go",
-		config.Path.GetBase(),
-		config.Path.GetStorage(),
-		config.Path.GetTmp(),
+	var (
+		p  = fmt.Sprintf("%s%s/main.go", config.Path.GetStorage(), config.Path.GetTmp())
+		cs = []*exec.Cmd{
+			exec.Command("go", "run", strings.TrimPrefix(p, "/")),
+		}
 	)
 
-	cmd := exec.Command("go", "run", src)
+	for _, c := range cs {
+		o.Manager.GetLogger().Info("[command] %s", c.String())
+		buf, err := c.Output()
+		if err != nil {
+			o.Manager.GetLogger().Info("          error: %s", err)
+			return err
+		}
+		o.Manager.GetLogger().Info("          result: %s", buf)
+	}
 
-	if err := cmd.Run(); err != nil {
+	return nil
+}
+
+func (o *compile) install2() error {
+	// src := fmt.Sprintf("%s%s/main.go", config.Path.GetStorage(), config.Path.GetTmp())
+
+	cmd := exec.Command(
+		"cd", config.Path.GetBase(), "&&",
+		"go", "run", strings.TrimPrefix(
+			fmt.Sprintf("%s%s/main.go", config.Path.GetStorage(), config.Path.GetTmp()),
+			"/",
+		),
+	)
+
+	buf, err := cmd.Output()
+
+	if err != nil {
 		return err
 	}
+
+	println("buffer: ", string(buf))
+
+	// s, _ := bufio.NewReader(c.Stdout).ReadString('\n')
+	// println("s: ", s)
+	// println("c end: ", c.Stdout())
 
 	return nil
 }
@@ -102,10 +134,10 @@ func (o *compile) make() error {
 	// Load imports.
 	sort.Strings(o.structPkgList)
 	tpl += "import ("
+	tpl += fmt.Sprintf("\n    \"github.com/fuyibing/gdoc/reflectors\"")
 	for _, k := range o.structPkgList {
 		tpl += fmt.Sprintf("\n    %s \"%s\"", o.structPkgAlias[k], k)
 	}
-	tpl += fmt.Sprintf("\n    \"github.com/fuyibing/gdoc/reflectors\"")
 	tpl += "\n)\n\n"
 
 	// Load structs.
@@ -118,8 +150,19 @@ func (o *compile) make() error {
 	// Load main runner.
 	tpl += "func main(){\n"
 	tpl += "    ref := reflectors.New()\n"
+	tpl += fmt.Sprintf("    ref.BasePath = \"%s\"\n", config.Path.GetBase())
+	tpl += fmt.Sprintf("    ref.StoragePath = \"%s\"\n", config.Path.GetStorage())
+	tpl += fmt.Sprintf("    ref.TmpPath = \"%s\"\n", config.Path.GetTmp())
+	tpl += "\n"
 	tpl += "    for k, v := range mapper {\n"
-	tpl += "        ref.Parse(k, v)\n"
+	tpl += "        if err := ref.Parse(k, v); err != nil {\n"
+	tpl += "        	println(err.Error())\n"
+	tpl += "        	return\n"
+	tpl += "        }\n"
+	tpl += "    }\n"
+	tpl += "\n"
+	tpl += "    if err := ref.Save(); err != nil {\n"
+	tpl += "        println(err.Error())\n"
 	tpl += "    }\n"
 	tpl += "}\n"
 
