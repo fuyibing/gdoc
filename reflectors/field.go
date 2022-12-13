@@ -74,29 +74,34 @@ func (o *Field) Map() interface{} {
 	return o.Value
 }
 
-func (o *Field) Parse(v reflect.Value) error {
+func (o *Field) Parse(v reflect.Value) {
+	// o.s.reflection.Info("<%v.%v> %v", v.Type().PkgPath(), v.Type().Name(), v.String())
+
 	// 结构体嵌套.
 	if v.Kind() == reflect.Struct {
 		o.child = NewStruct(o.s.reflection)
-		return o.child.Iterate(v)
+		o.child.Iterate(v)
+		return
 	}
 
 	// 指针转结构体.
 	if v.Kind() == reflect.Ptr {
-		return o.Parse(reflect.New(v.Type().Elem()).Elem())
+		o.Parse(reflect.New(v.Type().Elem()).Elem())
+		return
 	}
 
 	// 切片转结构体.
 	if v.Kind() == reflect.Slice {
 		o.Array = true
-		return o.Parse(reflect.New(v.Type().Elem()).Elem())
+		o.Parse(reflect.New(v.Type().Elem()).Elem())
+		return
 	}
 
 	// MAP类型.
 	if v.Kind() == reflect.Map {
-		o.Type = "object"
-		o.Value = make(map[interface{}]interface{})
-		return nil
+		o.Type = "MAP"
+		o.Value = make(map[int]int)
+		return
 	}
 
 	// 系统类型.
@@ -128,7 +133,7 @@ func (o *Field) Parse(v reflect.Value) error {
 
 	o.Type = v.Kind().String()
 	o.parseMock()
-	return nil
+	return
 }
 
 func (o *Field) SortKey() string {

@@ -49,7 +49,10 @@ func (o *Struct) Items() []*base.Item {
 
 // Iterate
 // 迭代字段.
-func (o *Struct) Iterate(v reflect.Value) (err error) {
+
+func (o *Struct) Iterate(v reflect.Value) {
+	o.reflection.Info("find struct: %v.%v", v.Type().PkgPath(), v.Type().Name())
+
 	for i := 0; i < v.NumField(); i++ {
 		iv := v.Field(i)
 		isf := v.Type().Field(i)
@@ -57,26 +60,20 @@ func (o *Struct) Iterate(v reflect.Value) (err error) {
 		// 非匿名.
 		if !isf.Anonymous {
 			if regexp.MustCompile(`^[A-Z]`).MatchString(isf.Name) {
-				if err = o.field(iv, isf); err != nil {
-					return
-				}
+				o.field(iv, isf)
 			}
 			continue
 		}
 
 		// 匿名指针.
 		if iv.Kind() == reflect.Ptr {
-			if err = o.Iterate(reflect.New(iv.Type().Elem()).Elem()); err != nil {
-				return
-			}
+			o.Iterate(reflect.New(iv.Type().Elem()).Elem())
 			continue
 		}
 
 		// 匿名结构体.
 		if iv.Kind() == reflect.Struct {
-			if err = o.Iterate(v); err != nil {
-				return
-			}
+			o.Iterate(v)
 			continue
 		}
 	}
@@ -100,17 +97,13 @@ func (o *Struct) Map() map[string]interface{} {
 	return res
 }
 
-func (o *Struct) field(v reflect.Value, sf reflect.StructField) (err error) {
+// 解析字段.
+func (o *Struct) field(v reflect.Value, sf reflect.StructField) {
 	f := NewField(o, sf)
-
-	if err = f.Parse(v); err != nil {
-		return
-	}
+	f.Parse(v)
 
 	o.mu.Lock()
 	o.FieldList = append(o.FieldList, f.SortKey())
 	o.FieldMapper[f.SortKey()] = f
 	o.mu.Unlock()
-
-	return
 }

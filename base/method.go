@@ -14,6 +14,7 @@ import (
 type (
 	Method interface {
 		GetComment() Comment
+		GetContentType() ContentType
 		GetController() Controller
 		GetName() string
 		GetRequestMethod() string
@@ -24,17 +25,19 @@ type (
 		Comment    Comment
 		Controller Controller
 
-		Name          string // eg. PostUser
-		RequestMethod string // eg. POST
-		RequestUrl    string // eg. /user
+		ContentType   ContentType // eg. application/json
+		Name          string      // eg. PostUser
+		RequestMethod string      // eg. POST
+		RequestUrl    string      // eg. /user
 	}
 )
 
 func NewMethod(controller Controller, name string) Method {
 	return (&method{
-		Controller: controller,
-		Comment:    NewComment(name),
-		Name:       name,
+		Controller:  controller,
+		Comment:     NewComment(name),
+		Name:        name,
+		ContentType: ContentJson,
 	}).init()
 }
 
@@ -42,11 +45,12 @@ func NewMethod(controller Controller, name string) Method {
 // Interface methods
 // /////////////////////////////////////////////////////////////
 
-func (o *method) GetComment() Comment       { return o.Comment }
-func (o *method) GetController() Controller { return o.Controller }
-func (o *method) GetName() string           { return o.Name }
-func (o *method) GetRequestMethod() string  { return o.RequestMethod }
-func (o *method) GetRequestUrl() string     { return o.RequestUrl }
+func (o *method) GetContentType() ContentType { return o.ContentType }
+func (o *method) GetComment() Comment         { return o.Comment }
+func (o *method) GetController() Controller   { return o.Controller }
+func (o *method) GetName() string             { return o.Name }
+func (o *method) GetRequestMethod() string    { return o.RequestMethod }
+func (o *method) GetRequestUrl() string       { return o.RequestUrl }
 
 // /////////////////////////////////////////////////////////////
 // Initialize

@@ -10,9 +10,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fuyibing/gdoc/base"
+	"github.com/fuyibing/gdoc/config"
 	"os"
 	"reflect"
 	"regexp"
+	"strings"
 	"sync"
 )
 
@@ -43,84 +45,106 @@ func New() *Reflection {
 // Interface methods
 // /////////////////////////////////////////////////////////////
 
+// Error
+// 打印错误.
+func (o *Reflection) Error(err error) {
+	println("[REFLECT ERR]", err.Error())
+}
+
+// Info
+// 打印信息.
+func (o *Reflection) Info(format string, args ...interface{}) {
+	println("[REFLECTIONS]", fmt.Sprintf(format, args...))
+}
+
 // Parse
 // 解析结构体.
 //
 //   ref.Parse("pkg.Example", &pkg.Example{})
-func (o *Reflection) Parse(key string, ptr interface{}) error {
+func (o *Reflection) Parse(key string, ptr interface{}) {
 	o.mu.Lock()
 
+	// 重复检查.
 	if _, ok := o.Structs[key]; ok {
 		o.mu.Unlock()
-		return nil
+		return
 	}
 
+	// 解析结果.
 	s := NewStruct(o)
 	o.Structs[key] = s
 	o.mu.Unlock()
 
-	return s.Iterate(reflect.ValueOf(ptr).Elem())
+	// 迭代过程.
+	x := reflect.ValueOf(ptr).Elem()
+	s.Iterate(x)
 }
 
 // Save
 // 反射结果保存到JSON文件中.
-func (o *Reflection) Save() error {
+func (o *Reflection) Save() {
 	for k, v := range o.Structs {
-		if err := func(fk string, fp *Struct) error {
+		func(fk string, fp *Struct) {
 			for mk, mp := range map[string]interface{}{
 				base.JsonFileItem(fk): fp.Items(),
 				base.JsonFileCode(fk): fp.Map(),
 			} {
-				if err := o.save(mk, mp); err != nil {
-					return err
-				}
+				o.save(mk, mp)
 			}
-			return nil
-		}(k, v); err != nil {
-			return err
-		}
+		}(k, v)
 	}
-	return nil
 }
 
 // /////////////////////////////////////////////////////////////
 // Initialize
 // /////////////////////////////////////////////////////////////
 
-func (o *Reflection) save(name string, ptr interface{}) error {
+func (o *Reflection) save(name string, ptr interface{}) {
 	var (
 		path     = fmt.Sprintf("%s%s%s/%s", o.BasePath, o.StoragePath, o.TmpPath, name)
 		buf, err = json.MarshalIndent(ptr, "", "    ")
+		file     *os.File
 	)
 
+	// 打印错误.
+	defer func() {
+		if file != nil {
+			err = file.Close()
+		}
+		if err != nil {
+			o.Error(err)
+		}
+	}()
+
+	// 转化错误.
 	if err != nil {
-		return err
+		return
 	}
 
-	// 1. 检查路径.
+	// 检查路径.
 	m := regexp.MustCompile(`^(\S+)/([^/]+)$`).FindStringSubmatch(path)
 	if len(m) != 3 {
-		return fmt.Errorf("invalid file path: %v", m[1])
+		err = fmt.Errorf("invalid file path: %v", m[1])
+		return
 	}
 
-	// 2. 创建目录.
+	// 创建目录.
 	if _, ok := o.directories[m[1]]; !ok {
 		if err = os.MkdirAll(m[1], os.ModePerm); err != nil {
-			return err
+			return
 		}
 		o.directories[m[1]] = true
 	}
 
-	// 3. 写入内容.
-	file, err := os.OpenFile(path, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, os.ModePerm)
-	if err != nil {
-		return err
+	// 打开文件.
+	if file, err = os.OpenFile(path, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, os.ModePerm); err != nil {
+		return
 	}
 
-	defer func() {
-		_ = file.Close()
-	}()
-
-	_, err = file.Write(buf)
-	return err
+	// 写入内容.
+	if _, err = file.Write(buf); err == nil {
+		o.Info("create file: %v",
+			strings.TrimPrefix(path, config.Path.GetBase()+"/"),
+		)
+	}
 }

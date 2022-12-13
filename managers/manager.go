@@ -4,7 +4,9 @@
 package managers
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/fuyibing/gdoc/base"
 	"github.com/fuyibing/gdoc/config"
 	"os"
 	"regexp"
@@ -20,6 +22,8 @@ type (
 		GetCompile() Compile
 		GetLogger() Logger
 		GetScanner() Scanner
+		LoadJsonCode(key string) map[string]interface{}
+		LoadJsonItems(key string) []*base.Item
 		SaveFile(path, text string) error
 	}
 
@@ -36,14 +40,50 @@ type (
 // Interface methods
 // /////////////////////////////////////////////////////////////
 
-func (o *management) GetCompile() Compile              { return o.Compile }
-func (o *management) GetLogger() Logger                { return o.Logger }
-func (o *management) GetScanner() Scanner              { return o.Scanner }
-func (o *management) SaveFile(path, text string) error { return o.saveFile(path, text) }
+func (o *management) GetCompile() Compile                            { return o.Compile }
+func (o *management) GetLogger() Logger                              { return o.Logger }
+func (o *management) GetScanner() Scanner                            { return o.Scanner }
+func (o *management) LoadJsonCode(key string) map[string]interface{} { return o.loadJsonCode(key) }
+func (o *management) LoadJsonItems(key string) []*base.Item          { return o.loadJsonItems(key) }
+func (o *management) SaveFile(path, text string) error               { return o.saveFile(path, text) }
 
 // /////////////////////////////////////////////////////////////
 // Access file
 // /////////////////////////////////////////////////////////////
+
+func (o *management) loadJsonCode(key string) map[string]interface{} {
+	path := fmt.Sprintf("%s%s%s/%s",
+		config.Path.GetBase(),
+		config.Path.GetStorage(),
+		config.Path.GetTmp(),
+		base.JsonFileCode(key),
+	)
+
+	if buf, err := os.ReadFile(path); err == nil {
+		v := make(map[string]interface{})
+		if err = json.Unmarshal(buf, &v); err == nil {
+			return v
+		}
+	}
+	return nil
+}
+
+func (o *management) loadJsonItems(key string) []*base.Item {
+	path := fmt.Sprintf("%s%s%s/%s",
+		config.Path.GetBase(),
+		config.Path.GetStorage(),
+		config.Path.GetTmp(),
+		base.JsonFileItem(key),
+	)
+
+	if buf, err := os.ReadFile(path); err == nil {
+		v := make([]*base.Item, 0)
+		if err = json.Unmarshal(buf, &v); err == nil {
+			return v
+		}
+	}
+	return nil
+}
 
 func (o *management) saveFile(path, text string) error {
 	// 1. 检查路径.
