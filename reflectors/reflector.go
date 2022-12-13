@@ -2,6 +2,7 @@
 // date: 2022-12-05
 
 // Package reflectors
+//
 // 通过结构体反射, 解析指定结构下的字段, 以及嵌套的结构体.
 package reflectors
 
@@ -42,6 +43,10 @@ func New() *Reflection {
 // Interface methods
 // /////////////////////////////////////////////////////////////
 
+// Parse
+// 解析结构体.
+//
+//   ref.Parse("pkg.Example", &pkg.Example{})
 func (o *Reflection) Parse(key string, ptr interface{}) error {
 	o.mu.Lock()
 
@@ -57,17 +62,21 @@ func (o *Reflection) Parse(key string, ptr interface{}) error {
 	return s.Iterate(reflect.ValueOf(ptr).Elem())
 }
 
+// Save
+// 反射结果保存到JSON文件中.
 func (o *Reflection) Save() error {
-	for k, s := range o.Structs {
-		if err := func(key string, ptr *Struct) error {
-			if err := o.save(base.JsonFileItem(key), ptr.Items()); err != nil {
-				return err
-			}
-			if err := o.save(base.JsonFileCode(key), ptr.Map()); err != nil {
-				return err
+	for k, v := range o.Structs {
+		if err := func(fk string, fp *Struct) error {
+			for mk, mp := range map[string]interface{}{
+				base.JsonFileItem(fk): fp.Items(),
+				base.JsonFileCode(fk): fp.Map(),
+			} {
+				if err := o.save(mk, mp); err != nil {
+					return err
+				}
 			}
 			return nil
-		}(k, s); err != nil {
+		}(k, v); err != nil {
 			return err
 		}
 	}

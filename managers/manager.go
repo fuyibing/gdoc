@@ -71,7 +71,7 @@ func (o *management) saveFile(path, text string) error {
 	}()
 
 	if _, err = file.WriteString(text); err == nil {
-		o.Logger.Info("[save]: %s", strings.TrimPrefix(path, config.Path.GetBase()))
+		o.Logger.Info("[save] %s", strings.TrimPrefix(path, config.Path.GetBase()))
 	}
 	return err
 }

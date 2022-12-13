@@ -113,7 +113,7 @@ func (o *reader) check(line int, text string) {
 	// Method.
 	if m := config.Regex.GetMethod().FindStringSubmatch(text); len(m) == 3 {
 		if config.Regex.GetExported().MatchString(m[1]) && config.Regex.GetExported().MatchString(m[2]) {
-			o.checkMethod(line, m[1], m[2])
+			o.checkMethod(line, text, m[1], m[2])
 		}
 	}
 }
@@ -123,16 +123,28 @@ func (o *reader) checkController(line int, cn string) {
 	o.doComment(controller, controller.GetComment(), line)
 }
 
-func (o *reader) checkMethod(line int, cn, mn string) {
+// 检查方法.
+func (o *reader) checkMethod(line int, code, cn, mn string) {
 	var (
 		controller = o.doController(cn)
 		method     = controller.GetMethod(mn)
 	)
 
+	// 读取方法.
+	// 若指定方法在控制器中不存在, 则是创建.
 	if method == nil {
 		method = base.NewMethod(controller, mn)
 		controller.SetMethod(mn, method)
 	}
+
+	// 绑定源码.
+	method.GetComment().SetSource(
+		line,
+		code,
+		fmt.Sprintf("%s%s/%s", config.Path.GetController(), o.folder, o.name),
+	)
+
+	// 解析源码.
 	o.doComment(method.GetController(), method.GetComment(), line)
 }
 

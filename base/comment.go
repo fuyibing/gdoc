@@ -11,15 +11,25 @@ import (
 type (
 	Comment interface {
 		AddText(line int, text string)
+
+		GetCode() string
+		GetLine() int
+		GetPath() string
+
 		GetTitle() (s string)
 		GetDescription() (s string)
 		GetRequest() Request
 		GetResponses() []Response
+		IsIgnored() bool
+		SetSource(line int, code, path string)
 		SetRequest(n int, s string)
 		SetResponse(t ResponseType, n int, s string)
 	}
 
 	comment struct {
+		code, path string
+		line       int
+
 		name       string
 		request    Request
 		responses  []Response
@@ -58,6 +68,10 @@ func (o *comment) AddText(line int, text string) {
 	}
 }
 
+func (o *comment) GetCode() string { return o.code }
+func (o *comment) GetLine() int    { return o.line }
+func (o *comment) GetPath() string { return o.path }
+
 func (o *comment) GetTitle() string {
 	if o.textLength > 0 {
 		return strings.TrimSpace(o.textList[0])
@@ -67,7 +81,7 @@ func (o *comment) GetTitle() string {
 
 func (o *comment) GetDescription() (s string) {
 	if o.textLength > 1 {
-		s = strings.Join(o.textList[1:], "\n")
+		s = strings.TrimSpace(strings.Join(o.textList[1:], "\n"))
 	}
 	return
 }
@@ -76,10 +90,18 @@ func (o *comment) GetRequest() Request { return o.request }
 
 func (o *comment) GetResponses() []Response { return o.responses }
 
+func (o *comment) IsIgnored() bool { return false }
+
 func (o *comment) SetRequest(n int, s string) { o.request = NewRequest(n, s) }
 
 func (o *comment) SetResponse(t ResponseType, n int, s string) {
 	o.responses = append(o.responses, NewResponse(t, n, s))
+}
+
+func (o *comment) SetSource(line int, code, path string) {
+	o.line = line
+	o.code = code
+	o.path = path
 }
 
 // /////////////////////////////////////////////////////////////
