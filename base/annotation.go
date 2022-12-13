@@ -16,6 +16,7 @@ type (
 		GetLine() int
 		GetType() AnnotationType
 		GetValue(i int) string
+		GetValues(i int) string
 	}
 
 	annotation struct {
@@ -48,6 +49,7 @@ func (o *annotation) GetKey() string          { return o.Key }
 func (o *annotation) GetLine() int            { return o.Line }
 func (o *annotation) GetType() AnnotationType { return o.Type }
 func (o *annotation) GetValue(i int) string   { return o.getValue(i) }
+func (o *annotation) GetValues(i int) string  { return o.getValues(i) }
 
 // /////////////////////////////////////////////////////////////
 // Access methods
@@ -56,6 +58,13 @@ func (o *annotation) GetValue(i int) string   { return o.getValue(i) }
 func (o *annotation) getValue(i int) string {
 	if i < o.Length {
 		return o.Values[i]
+	}
+	return ""
+}
+
+func (o *annotation) getValues(i int) string {
+	if i < o.Length {
+		return strings.Join(o.Values[i:], ", ")
 	}
 	return ""
 }

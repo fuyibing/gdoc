@@ -10,6 +10,7 @@ import (
 	"github.com/fuyibing/gdoc/config"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -152,6 +153,20 @@ func (o *reader) doAnnotation(controller base.Controller, comment base.Comment, 
 	an := base.NewAnnotation(line, key, value)
 
 	switch an.GetType() {
+	case base.AnnotationError:
+		if s := an.GetFirst(); s != "" {
+			if sn, se := strconv.ParseInt(s, 10, 64); se == nil {
+				comment.SetError(sn, an.GetValue(1), an.GetValues(2))
+			}
+		}
+
+	case base.AnnotationHeader:
+		if k := an.GetValue(0); k != "" {
+			if v := an.GetValue(1); v != "" {
+				comment.SetHeader(k, v, an.GetValues(2))
+			}
+		}
+
 	case base.AnnotationRequest:
 		if s := an.GetFirst(); s != "" {
 			comment.SetRequest(line, an.GetFirst())

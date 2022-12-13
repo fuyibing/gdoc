@@ -9,6 +9,7 @@ type (
 
 const (
 	AnnotationError          AnnotationType = "Error"
+	AnnotationHeader         AnnotationType = "Header"
 	AnnotationRequest        AnnotationType = "Request"
 	AnnotationResponse       AnnotationType = "Response"
 	AnnotationResponseData   AnnotationType = "ResponseData"

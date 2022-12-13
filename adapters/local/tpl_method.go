@@ -40,6 +40,8 @@ func (o *MethodTpl) Save() error {
 
 		// 入参.
 		{
+			o.errors,
+			o.headers,
 			o.request,
 		},
 
@@ -159,6 +161,86 @@ func (o *MethodTpl) info() {
 // /////////////////////////////////////////////////////////////
 // Part 3
 // /////////////////////////////////////////////////////////////
+
+func (o *MethodTpl) errors() {
+	var (
+		list = make([]string, 0)
+		errs = o.method.GetComment().GetErrors()
+	)
+
+	// 无值.
+	if len(errs) == 0 {
+		o.contents = append(o.contents, "----",
+			fmt.Sprintf("### 错误码"),
+			fmt.Sprintf("> 空"),
+		)
+		return
+	}
+
+	// 表头.
+	list = append(list,
+		fmt.Sprintf("| 编码 | 错误 | 描述 |"),
+		fmt.Sprintf("| :---- | :---- | :---- |"),
+	)
+
+	// 表体.
+	for _, err := range errs {
+		list = append(list,
+			fmt.Sprintf("| %v | %v | %v |",
+				err.Code,
+				err.Message,
+				err.Description,
+			),
+		)
+	}
+
+	// 加入.
+	o.contents = append(o.contents,
+		"----",
+		fmt.Sprintf("### 错误码"),
+		strings.Join(list, "\n"),
+	)
+}
+
+func (o *MethodTpl) headers() {
+	var (
+		list    = make([]string, 0)
+		headers = o.method.GetComment().GetHeaders()
+	)
+
+	// 无值.
+	if len(headers) == 0 {
+		o.contents = append(o.contents, "----",
+			fmt.Sprintf("### 请求头"),
+			fmt.Sprintf("> 空"),
+		)
+		return
+	}
+
+	// 表头.
+	list = append(list,
+		fmt.Sprintf("| 键名 | 键值 | 描述 |"),
+		fmt.Sprintf("| :---- | :---- | :---- |"),
+	)
+
+	// 表体.
+	for _, header := range headers {
+		list = append(list,
+			fmt.Sprintf("| %v | %v | %v |",
+				header.Key,
+				header.Value,
+				header.Description,
+			),
+		)
+	}
+
+	// 加入.
+	o.contents = append(o.contents,
+		"----",
+		fmt.Sprintf("### 请求头"),
+		strings.Join(list, "\n"),
+	)
+}
 
 func (o *MethodTpl) request() {
 	if r := o.method.GetComment().GetRequest(); r != nil {
