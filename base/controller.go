@@ -1,78 +1,76 @@
 // author: wsfuyibing <websearch@163.com>
-// date: 2022-12-09
+// date: 2022-12-14
 
 package base
 
 import (
 	"fmt"
-	"github.com/fuyibing/gdoc/config"
-	"strings"
+	"sync"
 )
 
 type (
 	Controller interface {
-		GetComment() Comment
-		GetMethod(key string) Method
+		GetComment() *Comment
+		GetMapping() Mapping
+		GetMethod(k string) Method
 		GetMethods() map[string]Method
-		GetName() string
-		GetPackage() string
 		GetPrefix() string
-		SetMethod(key string, method Method)
-		SetPrefix(prefix string)
+		GetSortKey() string
+		SetMethod(k string, m Method)
+		SetPrefix(s string)
 	}
 
 	controller struct {
-		Comment Comment
-
-		Name    string // eg. UserController
-		Package string // eg. app/controllers/user
-		Prefix  string // eg. /user
-
-		methodList   []string
-		methodMapper map[string]Method
+		comment *Comment
+		mapping Mapping
+		methods map[string]Method
+		mu      sync.RWMutex
+		prefix  string
 	}
 )
 
-func NewController(name, prefix string) Controller {
+func NewController(mapping Mapping) Controller {
 	return (&controller{
-		Comment: NewComment(name),
-
-		Name:    name,
-		Prefix:  prefix,
-		Package: strings.TrimPrefix(fmt.Sprintf("%s%s", config.Path.GetController(), prefix), "/"),
+		mapping: mapping,
+		comment: NewComment(),
 	}).init()
 }
 
-// /////////////////////////////////////////////////////////////
-// Interface method
-// /////////////////////////////////////////////////////////////
-
-func (o *controller) GetComment() Comment                 { return o.Comment }
-func (o *controller) GetMethod(key string) Method         { return o.getMethod(key) }
-func (o *controller) GetMethods() map[string]Method       { return o.methodMapper }
-func (o *controller) GetName() string                     { return o.Name }
-func (o *controller) GetPackage() string                  { return o.Package }
-func (o *controller) GetPrefix() string                   { return o.Prefix }
-func (o *controller) SetMethod(key string, method Method) { o.methodMapper[key] = method }
-func (o *controller) SetPrefix(prefix string)             { o.Prefix = prefix }
+func (o *controller) GetComment() *Comment          { return o.comment }
+func (o *controller) GetMapping() Mapping           { return o.mapping }
+func (o *controller) GetMethod(k string) Method     { return o.getMethod(k) }
+func (o *controller) GetMethods() map[string]Method { return o.methods }
+func (o *controller) GetPrefix() string             { return o.prefix }
+func (o *controller) GetSortKey() string            { return o.getSortKey() }
+func (o *controller) SetMethod(k string, m Method)  { o.setMethod(k, m) }
+func (o *controller) SetPrefix(s string)            { o.prefix = s }
 
 // /////////////////////////////////////////////////////////////
-// Access method
+// Access methods
 // /////////////////////////////////////////////////////////////
 
-func (o *controller) getMethod(key string) Method {
-	if m, ok := o.methodMapper[key]; ok {
+func (o *controller) getMethod(k string) Method {
+	o.mu.RLock()
+	defer o.mu.RUnlock()
+	if m, ok := o.methods[k]; ok {
 		return m
 	}
 	return nil
 }
 
-// /////////////////////////////////////////////////////////////
-// Initialize
-// /////////////////////////////////////////////////////////////
+func (o *controller) getSortKey() string {
+	return fmt.Sprintf("%s/%s", o.prefix, o.comment.Name)
+}
 
 func (o *controller) init() *controller {
-	o.methodList = make([]string, 0)
-	o.methodMapper = make(map[string]Method)
+	o.mu = sync.RWMutex{}
+
+	o.methods = make(map[string]Method)
 	return o
+}
+
+func (o *controller) setMethod(k string, m Method) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.methods[k] = m
 }

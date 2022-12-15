@@ -1,5 +1,5 @@
 // author: wsfuyibing <websearch@163.com>
-// date: 2022-12-09
+// date: 2022-12-14
 
 package base
 
@@ -8,76 +8,41 @@ import (
 )
 
 type (
-	// Annotation
-	// used in code comment.
 	Annotation interface {
 		GetFirst() string
-		GetKey() string
-		GetLine() int
+		GetName() string
 		GetType() AnnotationType
 		GetValue(i int) string
 		GetValues(i int) string
 	}
 
 	annotation struct {
-		Key, Value string
-		Line       int
-
-		Length int
-		Values []string
-		Type   AnnotationType
+		Length      int
+		Name, Param string
+		Type        AnnotationType
+		Values      []string
 	}
 )
 
-// NewAnnotation
-//
-//   NewAnnotation("Request", "app/logics/example.LoginRequest")
-//   NewAnnotation("Response", "app/logics/example.LoginResponse")
-func NewAnnotation(line int, key, value string) Annotation {
+func NewAnnotation(name, param string) Annotation {
 	return (&annotation{
-		Key: key, Value: value, Line: line,
-		Values: make([]string, 0),
+		Name:  name,
+		Param: param,
+		Type:  AnnotationType(name),
 	}).init()
 }
 
-// /////////////////////////////////////////////////////////////
-// Interface methods
-// /////////////////////////////////////////////////////////////
-
 func (o *annotation) GetFirst() string        { return o.getValue(0) }
-func (o *annotation) GetKey() string          { return o.Key }
-func (o *annotation) GetLine() int            { return o.Line }
+func (o *annotation) GetName() string         { return o.Name }
 func (o *annotation) GetType() AnnotationType { return o.Type }
 func (o *annotation) GetValue(i int) string   { return o.getValue(i) }
 func (o *annotation) GetValues(i int) string  { return o.getValues(i) }
 
-// /////////////////////////////////////////////////////////////
-// Access methods
-// /////////////////////////////////////////////////////////////
-
-func (o *annotation) getValue(i int) string {
-	if i < o.Length {
-		return o.Values[i]
-	}
-	return ""
-}
-
-func (o *annotation) getValues(i int) string {
-	if i < o.Length {
-		return strings.Join(o.Values[i:], ", ")
-	}
-	return ""
-}
-
-// /////////////////////////////////////////////////////////////
-// Initialize
-// /////////////////////////////////////////////////////////////
-
 func (o *annotation) init() *annotation {
-	o.Type = AnnotationType(o.Key)
+	o.Values = make([]string, 0)
 
-	if o.Value != "" {
-		for _, s := range strings.Split(o.Value, ",") {
+	if o.Param != "" {
+		for _, s := range strings.Split(o.Param, ",") {
 			s = strings.TrimSpace(s)
 			s = strings.TrimPrefix(s, `"`)
 			s = strings.TrimSuffix(s, `"`)
@@ -88,4 +53,18 @@ func (o *annotation) init() *annotation {
 	}
 
 	return o
+}
+
+func (o *annotation) getValue(i int) (s string) {
+	if i < o.Length {
+		s = o.Values[i]
+	}
+	return
+}
+
+func (o *annotation) getValues(i int) (s string) {
+	if i < o.Length {
+		s = strings.Join(o.Values[i:], ", ")
+	}
+	return
 }

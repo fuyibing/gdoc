@@ -1,5 +1,5 @@
 // author: wsfuyibing <websearch@163.com>
-// date: 2022-12-09
+// date: 2022-12-14
 
 package base
 
@@ -15,11 +15,5 @@ const (
 	AnnotationResponseData   AnnotationType = "ResponseData"
 	AnnotationResponseList   AnnotationType = "ResponseList"
 	AnnotationResponsePaging AnnotationType = "ResponsePaging"
-
-	// AnnotationRoutePrefix
-	// use to define on controller.
-	//
-	//   @RoutePrefix(/)
-	//   @RoutePrefix(/example)
-	AnnotationRoutePrefix AnnotationType = "RoutePrefix"
+	AnnotationRoutePrefix    AnnotationType = "RoutePrefix"
 )

@@ -5,6 +5,7 @@ package reflectors
 
 import (
 	"github.com/fuyibing/gdoc/base"
+	"github.com/fuyibing/gdoc/conf"
 	"reflect"
 	"regexp"
 	"sort"
@@ -12,29 +13,29 @@ import (
 )
 
 type (
-	// Struct
-	// 结构体.
 	Struct struct {
 		FieldList   []string
 		FieldMapper map[string]*Field
 
-		mu         sync.RWMutex
-		reflection *Reflection
+		mu     sync.RWMutex
+		parser *ParserManager
 	}
 )
 
-func NewStruct(reflection *Reflection) *Struct {
+// NewStruct
+// create reflection struct instance.
+func NewStruct(parser *ParserManager) *Struct {
 	return &Struct{
 		FieldList:   make([]string, 0),
 		FieldMapper: make(map[string]*Field),
 
-		mu:         sync.RWMutex{},
-		reflection: reflection,
+		mu:     sync.RWMutex{},
+		parser: parser,
 	}
 }
 
 // Items
-// 导出元素列表.
+// return reflected files.
 func (o *Struct) Items() []*base.Item {
 	sort.Strings(o.FieldList)
 
@@ -48,16 +49,14 @@ func (o *Struct) Items() []*base.Item {
 }
 
 // Iterate
-// 迭代字段.
-
+// seek struct fields.
 func (o *Struct) Iterate(v reflect.Value) {
-	o.reflection.Info("find struct: %v.%v", v.Type().PkgPath(), v.Type().Name())
+	conf.Debugger.Info("find struct: %v.%v", v.Type().PkgPath(), v.Type().Name())
 
 	for i := 0; i < v.NumField(); i++ {
 		iv := v.Field(i)
 		isf := v.Type().Field(i)
 
-		// 非匿名.
 		if !isf.Anonymous {
 			if regexp.MustCompile(`^[A-Z]`).MatchString(isf.Name) {
 				o.field(iv, isf)
@@ -65,13 +64,11 @@ func (o *Struct) Iterate(v reflect.Value) {
 			continue
 		}
 
-		// 匿名指针.
 		if iv.Kind() == reflect.Ptr {
 			o.Iterate(reflect.New(iv.Type().Elem()).Elem())
 			continue
 		}
 
-		// 匿名结构体.
 		if iv.Kind() == reflect.Struct {
 			o.Iterate(v)
 			continue
@@ -81,7 +78,7 @@ func (o *Struct) Iterate(v reflect.Value) {
 }
 
 // Map
-// 导出键值对.
+// use to export struct fields.
 func (o *Struct) Map() map[string]interface{} {
 	sort.Strings(o.FieldList)
 
@@ -97,7 +94,6 @@ func (o *Struct) Map() map[string]interface{} {
 	return res
 }
 
-// 解析字段.
 func (o *Struct) field(v reflect.Value, sf reflect.StructField) {
 	f := NewField(o, sf)
 	f.Parse(v)

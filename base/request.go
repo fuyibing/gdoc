@@ -1,43 +1,35 @@
 // author: wsfuyibing <websearch@163.com>
-// date: 2022-12-10
+// date: 2022-12-14
 
 package base
 
 import (
-	"github.com/fuyibing/gdoc/config"
+	"fmt"
+	"github.com/fuyibing/gdoc/conf"
+	"regexp"
+	"strings"
 )
 
 type (
-	// Request
-	// defined by annotation.
-	Request interface {
-		GetKey() string
-		GetLine() int
-		GetName() string
-		GetPackage() string
-	}
+	Request struct {
+		Annotation Annotation
 
-	request struct {
-		Line    int
-		Key     string // eg. app/logics/user.LoginRequest
-		Name    string // eg. LoginRequest
-		Package string // eg. app/logics/user
+		Key       string
+		Pkg, Name string
 	}
 )
 
-func NewRequest(n int, k string) Request {
-	return (&request{Line: n, Key: k}).init()
+func NewRequest(a Annotation) *Request {
+	return (&Request{Annotation: a}).init()
 }
 
-func (o *request) GetKey() string     { return o.Key }
-func (o *request) GetLine() int       { return o.Line }
-func (o *request) GetName() string    { return o.Name }
-func (o *request) GetPackage() string { return o.Package }
+func (o *Request) init() *Request {
+	o.Key = strings.TrimPrefix(o.Annotation.GetFirst(), "/")
 
-func (o *request) init() *request {
-	if m := config.Regex.GetStructWithPackage().FindStringSubmatch(o.Key); len(m) == 3 {
+	if m := regexp.MustCompile(`^([^.]+)\.([^.]*)$`).FindStringSubmatch(o.Key); len(m) == 3 {
+		o.Pkg = fmt.Sprintf("%s/%s", conf.Config.Module, m[1])
 		o.Name = m[2]
-		o.Package = m[1]
 	}
+
 	return o
 }

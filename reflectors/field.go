@@ -12,8 +12,6 @@ import (
 )
 
 type (
-	// Field
-	// 反射字段.
 	Field struct {
 		s     *Struct
 		child *Struct
@@ -75,36 +73,34 @@ func (o *Field) Map() interface{} {
 }
 
 func (o *Field) Parse(v reflect.Value) {
-	// o.s.reflection.Info("<%v.%v> %v", v.Type().PkgPath(), v.Type().Name(), v.String())
-
-	// 结构体嵌套.
+	// Recursion.
 	if v.Kind() == reflect.Struct {
-		o.child = NewStruct(o.s.reflection)
+		o.child = NewStruct(o.s.parser)
 		o.child.Iterate(v)
 		return
 	}
 
-	// 指针转结构体.
+	// Type redirect for pointer.
 	if v.Kind() == reflect.Ptr {
 		o.Parse(reflect.New(v.Type().Elem()).Elem())
 		return
 	}
 
-	// 切片转结构体.
+	// Type redirect for slice.
 	if v.Kind() == reflect.Slice {
 		o.Array = true
 		o.Parse(reflect.New(v.Type().Elem()).Elem())
 		return
 	}
 
-	// MAP类型.
+	// Type explain on map.
 	if v.Kind() == reflect.Map {
 		o.Type = "MAP"
 		o.Value = make(map[int]int)
 		return
 	}
 
-	// 系统类型.
+	// System type.
 	//
 	// - reflect.Uintptr
 	// - reflect.Complex64
@@ -144,12 +140,10 @@ func (o *Field) SortKey() string {
 }
 
 func (o *Field) init(sf *reflect.StructField) *Field {
-	// 默认名.
 	o.Name = sf.Name
 	o.Key = sf.Name
 	o.Kind = FieldJson
 
-	// 自定义.
 	for kind, tag := range map[FieldKind]string{
 		FieldJson: "json",
 		FieldForm: "form",
@@ -161,7 +155,6 @@ func (o *Field) init(sf *reflect.StructField) *Field {
 		}
 	}
 
-	// 子集.
 	o.initDesc(sf)
 	o.initLabel(sf)
 	o.initMock(sf)

@@ -1,20 +1,22 @@
 // author: wsfuyibing <websearch@163.com>
-// date: 2022-12-09
+// date: 2022-12-14
 
 package tests
 
 import (
-	"github.com/fuyibing/gdoc/config"
-	"sync"
-)
-
-var (
-	basePath = "/Users/fuyibing/codes/git.uniondrug.com/gs-fin-es"
-	// basePath = "/Users/fuyibing/codes/git.uniondrug.com/gs-fin-monitor"
+	"github.com/fuyibing/gdoc/conf"
 )
 
 func init() {
-	new(sync.Once).Do(func() {
-		config.Path.SetBase(basePath)
-	})
+	// BasePath := "."
+	// BasePath := "/Users/fuyibing/go/src/ydyun360-medical-insurance"
+	// BasePath := "/Users/fuyibing/codes/git.uniondrug.com/gs-fin-es"
+	BasePath := "/Users/fuyibing/codes/git.uniondrug.com/gs-fin-monitor"
+
+	ControllerPath := "/app/controllers"
+	// ControllerPath := "/apps/basics/controllers"
+
+	conf.Path.SetBasePath(BasePath)
+	conf.Path.SetControllerPath(ControllerPath)
+	conf.Config.Load()
 }
