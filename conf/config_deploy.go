@@ -3,6 +3,10 @@
 
 package conf
 
+import (
+	"fmt"
+)
+
 type (
 	DeployConfig struct {
 		Protocol string
@@ -10,6 +14,13 @@ type (
 		Port     int
 	}
 )
+
+func (o *DeployConfig) Full() string {
+	if (o.Protocol == "http" && o.Port == 80) || (o.Protocol == "https" && o.Port == 443) {
+		return fmt.Sprintf("%s://%s", o.Protocol, o.Host)
+	}
+	return fmt.Sprintf("%s://%s:%d", o.Protocol, o.Host, o.Port)
+}
 
 func (o *DeployConfig) defaults() {
 	if o.Protocol == "" {

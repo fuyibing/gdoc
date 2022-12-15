@@ -34,12 +34,13 @@ func (o *PathManager) GetControllerPath() string          { return o.controllerP
 func (o *PathManager) GetDocumentJsonFile() string        { return o.documentJsonFile }
 func (o *PathManager) GetDocumentPath() string            { return o.documentPath }
 func (o *PathManager) GetTmpPath() string                 { return o.tmpPath }
-func (o *PathManager) SavePath(path, text string)         { o.saveFile(path, text) }
-func (o *PathManager) SetBasePath(s string)               { o.basePath, _ = filepath.Abs(s) }
-func (o *PathManager) SetControllerPath(s string)         { o.controllerPath = s }
-func (o *PathManager) SetDocumentJsonFile(s string)       { o.documentJsonFile = s }
-func (o *PathManager) SetDocumentPath(s string)           { o.documentPath = s }
-func (o *PathManager) SetTmpPath(s string)                { o.tmpPath = s }
+
+func (o *PathManager) SavePath(path, text string)   { o.saveFile(path, text) }
+func (o *PathManager) SetBasePath(s string)         { o.basePath, _ = filepath.Abs(s) }
+func (o *PathManager) SetControllerPath(s string)   { o.controllerPath = s }
+func (o *PathManager) SetDocumentJsonFile(s string) { o.documentJsonFile = s }
+func (o *PathManager) SetDocumentPath(s string)     { o.documentPath = s }
+func (o *PathManager) SetTmpPath(s string)          { o.tmpPath = s }
 
 func (o *PathManager) generateFilename(key, prefix string) (str string) {
 	str = strings.TrimPrefix(key, "/")

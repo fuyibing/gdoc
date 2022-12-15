@@ -17,12 +17,12 @@ type (
 	RegexManager struct {
 		HiddenFile *regexp.Regexp
 
-		SourceAnnotation      *regexp.Regexp
-		SourceComment         *regexp.Regexp
-		SourceController      *regexp.Regexp
-		SourceControllerGroup *regexp.Regexp
-		SourceFile            *regexp.Regexp
-		SourceMethod          *regexp.Regexp
+		SourceAnnotation                        *regexp.Regexp
+		SourceComment                           *regexp.Regexp
+		SourceController, SourceControllerGroup *regexp.Regexp
+		SourceFile                              *regexp.Regexp
+		SourceMethod                            *regexp.Regexp
+		SourceRoute, SourceRouteMethod          *regexp.Regexp
 	}
 )
 
@@ -35,5 +35,7 @@ func (o *RegexManager) init() *RegexManager {
 	o.SourceControllerGroup = regexSourceControllerGroup
 	o.SourceFile = regexSourceFile
 	o.SourceMethod = regexSourceMethod
+	o.SourceRoute = regexSourceRoute
+	o.SourceRouteMethod = regexSourceRouteMethod
 	return o
 }

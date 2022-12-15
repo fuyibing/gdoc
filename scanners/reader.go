@@ -43,7 +43,7 @@ func (o *reader) findMethod(line int, code, cn, mn string) {
 	// Create method if not exists.
 	if m == nil {
 		conf.Debugger.Info("[scanner:method] <%s.%s>", cn, mn)
-		m = base.NewMethod(c)
+		m = base.NewMethod(c, mn)
 		c.SetMethod(mn, m)
 	}
 

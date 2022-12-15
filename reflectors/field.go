@@ -75,6 +75,8 @@ func (o *Field) Map() interface{} {
 func (o *Field) Parse(v reflect.Value) {
 	// Recursion.
 	if v.Kind() == reflect.Struct {
+		o.Type = v.Type().PkgPath() + "." + v.Type().Name()
+
 		o.child = NewStruct(o.s.parser)
 		o.child.Iterate(v)
 		return

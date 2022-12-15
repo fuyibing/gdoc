@@ -85,6 +85,10 @@ func (o *Comment) GetTitle() string {
 	return o.Name
 }
 
+func (o *Comment) Ignored() bool {
+	return false
+}
+
 func (o *Comment) init() *Comment {
 	o.Errors = make([]*Error, 0)
 	o.Headers = make([]*Header, 0)
