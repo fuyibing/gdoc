@@ -29,18 +29,29 @@ func (o *Adapter) Run() {
 	o.runMethod()
 }
 
+// Initialize
+// instance fields.
 func (o *Adapter) init() *Adapter {
 	return o
 }
 
+// Run method.
 func (o *Adapter) runMethod() {
 	for _, c := range o.mapping.GetControllers() {
 		for _, m := range c.GetMethods() {
+			// Ignore
+			// method markdown.
+			if m.GetComment().Ignored {
+				continue
+			}
+
+			// Save method markdown.
 			tpl.NewMethod(o.mapping, m).Save()
 		}
 	}
 }
 
+// Run readme.
 func (o *Adapter) runReadme() {
 	tpl.NewReadme(o.mapping).Save()
 }

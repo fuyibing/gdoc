@@ -36,13 +36,14 @@ func NewMethod(mapping base.Mapping, method base.Method) *Method {
 func (o *Method) Save() {
 	for _, call := range []func(){
 		o.HeadTitle,
-		o.ApiDesc,
 		o.ApiInfo,
+		o.ApiDesc,
 		o.ApiCode,
+
+		o.ErrorCode,
 
 		o.RequestHeader,
 		o.RequestParam,
-		o.ErrorCode,
 		o.ResponseParams,
 
 		o.save,
@@ -52,99 +53,108 @@ func (o *Method) Save() {
 }
 
 // /////////////////////////////////////////////////////////////
-// Append callables methods
+// API Definitions.
 // /////////////////////////////////////////////////////////////
 
 // ApiCode
-// add example code.
+// api example code.
 func (o *Method) ApiCode() {
-	var (
-		pre  = "  "
-		list = []string{
-			fmt.Sprintf("%s```go", pre),
-			fmt.Sprintf("%s// %s", pre, o.method.GetController().GetComment().Name),
-			fmt.Sprintf("%s// %s.", pre, o.method.GetController().GetComment().GetTitle()),
-			fmt.Sprintf("%stype %s struct {", pre, strings.TrimSuffix(o.method.GetController().GetComment().Name, "}")),
-			fmt.Sprintf("%s}", pre),
-			fmt.Sprintf("%s", pre),
-			fmt.Sprintf("%s// %s", pre, o.method.GetComment().Name),
-			fmt.Sprintf("%s// %s.", pre, o.method.GetComment().GetTitle()),
-			fmt.Sprintf("%s%s", pre, strings.TrimSuffix(o.method.GetComment().Code, "}")),
-			fmt.Sprintf("%s}", pre),
-			fmt.Sprintf("%s```", pre),
-		}
-	)
+	// Controller
+	// code generator.
+	cs := []string{
+		fmt.Sprintf("// %s", o.method.GetController().GetComment().Name),
+		fmt.Sprintf("// %s.", o.method.GetController().GetComment().GetTitle()),
+		fmt.Sprintf("//"),
+		fmt.Sprintf("// %s - %s.%s", i18n.Lang("Struct"), o.method.GetController().GetComment().Pkg, o.method.GetController().GetComment().Name),
+		fmt.Sprintf("//"),
+		fmt.Sprintf("// %s - %d", i18n.Lang("Line"), o.method.GetController().GetComment().Line),
+		fmt.Sprintf("// %s - %s", i18n.Lang("Path"), o.method.GetController().GetComment().Path),
+		fmt.Sprintf("type %s struct {", o.method.GetController().GetComment().Name),
+		fmt.Sprintf("}"),
+	}
 
-	// Append to template.
-	o.templates = append(o.templates, strings.Join(list, o.nl))
+	// Method
+	// code generator.
+	ms := []string{
+		fmt.Sprintf("// %s", o.method.GetComment().Name),
+		fmt.Sprintf("// %s.", o.method.GetComment().GetTitle()),
+		fmt.Sprintf("//"),
+		fmt.Sprintf("// %s - %d", i18n.Lang("Line"), o.method.GetComment().Line),
+		fmt.Sprintf("// %s - %s", i18n.Lang("Path"), o.method.GetComment().Path),
+		fmt.Sprintf("%s", strings.TrimSuffix(o.method.GetComment().Code, "}")),
+		fmt.Sprintf("}"),
+	}
+
+	// Merge
+	// into template.
+	o.templates = append(o.templates,
+		fmt.Sprintf("```go\n%s\n```", strings.Join(cs, o.nl)),
+		fmt.Sprintf("```go\n%s\n```", strings.Join(ms, o.nl)),
+	)
 }
 
 // ApiDesc
-// add api description.
+// api description.
 func (o *Method) ApiDesc() {
 	if str := o.method.GetComment().GetDescription(); str != "" {
-		o.templates = append(o.templates, "----", str)
+		o.templates = append(o.templates, fmt.Sprintf("%s", strings.ReplaceAll(str, "\n", "<br />\n")))
 	}
 }
 
 // ApiInfo
-// add request route and content type info.
+// api basic info.
 func (o *Method) ApiInfo() {
-	o.templates = append(o.templates, "----", strings.Join([]string{
-		fmt.Sprintf(
-			"* %v: `%s`",
-			i18n.Lang("Content Type"),
-			o.method.GetContentType(),
-		), fmt.Sprintf(
-			"* %v: `%v` `%v`",
-			i18n.Lang("Route"),
-			o.method.GetRequestMethod(),
-			o.method.GetRequestUrl(),
-		), fmt.Sprintf(
-			"* %v: `%v`",
-			i18n.Lang("Deploy"),
-			conf.Config.Deploy.Full(),
-		), fmt.Sprintf(
-			"* %v: `%v`",
-			i18n.Lang("Updated"),
-			o.mapping.GetLastUpdated(),
-		), fmt.Sprintf("* %s: `<%s.%s> %s`",
-			i18n.Lang("Struct"),
-			o.method.GetController().GetComment().Pkg,
-			o.method.GetController().GetComment().Name,
-			o.method.GetComment().Name,
-		),
-	}, o.nl))
+	// Basic info.
+	//
+	// - route
+	// - deploy
+	// - content-type
+	list := []string{
+		fmt.Sprintf("**%v** : `%v` `%v`", i18n.Lang("Route"), o.method.GetRequestMethod(), o.method.GetRequestUrl()),
+		fmt.Sprintf("**%v** : `%v`", i18n.Lang("Deploy"), conf.Config.Deploy.Full()),
+		fmt.Sprintf("**%v** : `%s`", i18n.Lang("Content Type"), o.method.GetContentType()),
+	}
 
+	// Version.
+	if v := o.method.GetComment().Version; v != nil {
+		if s := v.GetFirst(); s != "" {
+			list = append(list,
+				fmt.Sprintf("**%v** : `%s`", i18n.Lang("Version"), s),
+			)
+		}
+	}
+
+	// Merge
+	// into templates.
+	o.templates = append(o.templates, strings.Join(list, "<br />\n"))
 }
 
 // ErrorCode
-// add error codes.
+// error code response definitions.
 func (o *Method) ErrorCode() {
+	// Return
+	// if error codes not defined by annotation.
 	if len(o.method.GetComment().Errors) < 1 {
-		o.templates = append(o.templates,
-			fmt.Sprintf("### %v", i18n.Lang("Error Codes")),
-		)
 		return
 	}
 
+	// Table
+	// head rows.
 	list := []string{
-		fmt.Sprintf(
-			"| %v | %v | %v |",
-			i18n.Lang("Code"),
-			i18n.Lang("Value"),
-			i18n.Lang("Description"),
-		),
+		fmt.Sprintf("| %v | %v | %v |", i18n.Lang("Code"), i18n.Lang("Value"), i18n.Lang("Description")),
 		fmt.Sprintf("| ---- | ---- | ---- |"),
 	}
 
+	// Table
+	// body rows.
 	for _, x := range o.method.GetComment().Errors {
-		list = append(list, fmt.Sprintf(
-			"| %v | %v | %v |",
-			x.Code, x.Message, x.Description,
-		))
+		list = append(list,
+			fmt.Sprintf("| %v | %v | %v |", x.Code, x.Message, x.Description),
+		)
 	}
 
+	// Merge
+	// into template.
 	o.templates = append(o.templates,
 		fmt.Sprintf("### %v", i18n.Lang("Error Codes")),
 		strings.Join(list, o.nl),
@@ -152,42 +162,39 @@ func (o *Method) ErrorCode() {
 }
 
 // HeadTitle
-// add H1 tag.
+// H1 tag.
 func (o *Method) HeadTitle() {
-	o.templates = append(o.templates, fmt.Sprintf("# %s",
-		o.method.GetComment().GetTitle(),
-	))
+	o.templates = append(o.templates,
+		fmt.Sprintf("# %s", o.method.GetComment().GetTitle()),
+	)
 }
 
 // RequestHeader
-// add request header params.
+// request header params.
 func (o *Method) RequestHeader() {
-	// H3
-	// for request params.
-	o.templates = append(o.templates, fmt.Sprintf("### %v", i18n.Lang("Request Headers")))
-
-	// Undefined.
+	// Return
+	// if header not defined by annotation.
 	if len(o.method.GetComment().Headers) < 1 {
 		return
 	}
 
+	// Table
+	// head rows.
 	list := []string{
-		fmt.Sprintf(
-			"| %v | %v | %v |",
-			i18n.Lang("Key"),
-			i18n.Lang("Value"),
-			i18n.Lang("Description"),
-		),
+		fmt.Sprintf("| %v | %v | %v |", i18n.Lang("Key"), i18n.Lang("Value"), i18n.Lang("Description")),
 		fmt.Sprintf("| ---- | ---- | ---- |"),
 	}
 
+	// Table
+	// body rows.
 	for _, x := range o.method.GetComment().Headers {
-		list = append(list, fmt.Sprintf(
-			"| %v | %v | %v |",
-			x.Key, x.Value, x.Description,
-		))
+		list = append(list,
+			fmt.Sprintf("| %v | %v | %v |", x.Key, x.Value, x.Description),
+		)
 	}
 
+	// Merge
+	// into template.
 	o.templates = append(o.templates,
 		fmt.Sprintf("### %v", i18n.Lang("Request Headers")),
 		strings.Join(list, o.nl),
@@ -199,9 +206,9 @@ func (o *Method) RequestHeader() {
 func (o *Method) RequestParam() {
 	// H3
 	// title for request annotation.
-	//
-	//   # Request Params
-	o.templates = append(o.templates, fmt.Sprintf("### %v", i18n.Lang("Request Params")))
+	o.templates = append(o.templates,
+		fmt.Sprintf("### %v", i18n.Lang("Request Params")),
+	)
 
 	// Return
 	// if request undefined.
@@ -211,18 +218,10 @@ func (o *Method) RequestParam() {
 
 	// Request
 	// struct info.
-	//
-	//   * Struct: `LoginRequest`
-	//   * Package: `mod/app/logics/user`
 	o.templates = append(o.templates,
 		strings.Join([]string{
-			fmt.Sprintf("* %s: `%s`",
-				i18n.Lang("Struct"),
-				o.method.GetComment().Request.Name,
-			), fmt.Sprintf("* %s: `%s`",
-				i18n.Lang("Package"),
-				o.method.GetComment().Request.Pkg,
-			),
+			fmt.Sprintf("* %s : `@%s(%s)`", i18n.Lang("Annotation"), o.method.GetComment().Request.Annotation.GetName(), o.method.GetComment().Request.Annotation.GetFirst()),
+			fmt.Sprintf("* %s : `<%s.%s>`", i18n.Lang("Struct"), o.method.GetComment().Request.Pkg, o.method.GetComment().Request.Name),
 		}, o.nl),
 	)
 
@@ -234,27 +233,18 @@ func (o *Method) RequestParam() {
 
 	// Request
 	// json code.
-	//
-	//   *Example Code*
-	//
-	//   ```json
-	//   {
-	//       "key": "value"
-	//   }
-	//   ```
 	if code := string(o.mapping.LoadTmpCode(o.method.GetComment().Request.Key)); code != "" {
-		// json code.
+		// Reset
+		// indent.
 		code = strings.ReplaceAll(code,
 			fmt.Sprintf("\n"),
 			fmt.Sprintf("\n%s", o.pre),
 		)
 
-		// append to templates.
+		// Merge
+		// into templates.
 		o.templates = append(o.templates,
-			// Catalog.
 			fmt.Sprintf("%s*%v*: ", o.pre, i18n.Lang("Example Code")),
-
-			// JSON Code.
 			strings.Join([]string{
 				fmt.Sprintf("%s```json", o.pre),
 				fmt.Sprintf("%s%s", o.pre, code),
@@ -267,22 +257,18 @@ func (o *Method) RequestParam() {
 // ResponseParam
 // add response param.
 func (o *Method) ResponseParam(i int, r *base.Response) {
-	o.templates = append(o.templates, fmt.Sprintf("### %v # %d", i18n.Lang("Response Params"), i+1))
+	// H3
+	// title for response annotation.
+	o.templates = append(o.templates,
+		fmt.Sprintf("### %v # %d", i18n.Lang("Response Params"), i+1),
+	)
 
-	// Request
+	// Response
 	// struct info.
-	//
-	//   * Struct: `LoginRequest`
-	//   * Package: `mod/app/logics/user`
 	o.templates = append(o.templates,
 		strings.Join([]string{
-			fmt.Sprintf("* %s: `%s`",
-				i18n.Lang("Struct"),
-				r.Name,
-			), fmt.Sprintf("* %s: `%s`",
-				i18n.Lang("Package"),
-				r.Pkg,
-			),
+			fmt.Sprintf("* %s : `@%s(%s)`", i18n.Lang("Annotation"), r.Annotation.GetName(), r.Annotation.GetFirst()),
+			fmt.Sprintf("* %s : `<%s.%s>`", i18n.Lang("Struct"), r.Pkg, r.Name),
 		}, o.nl),
 	)
 
@@ -294,27 +280,18 @@ func (o *Method) ResponseParam(i int, r *base.Response) {
 
 	// Response
 	// json code.
-	//
-	//   *Example Code*
-	//
-	//   ```json
-	//   {
-	//       "key": "value"
-	//   }
-	//   ```
 	if code := r.Type.Render(o.mapping.LoadTmpCode(r.Key)); code != "" {
-		// json code.
+		// Reset
+		// indent.
 		code = strings.ReplaceAll(code,
 			fmt.Sprintf("\n"),
 			fmt.Sprintf("\n%s", o.pre),
 		)
 
-		// append to templates.
+		// Merge
+		// into templates.
 		o.templates = append(o.templates,
-			// Catalog.
 			fmt.Sprintf("%s*%v*: ", o.pre, i18n.Lang("Example Code")),
-
-			// JSON Code.
 			strings.Join([]string{
 				fmt.Sprintf("%s```json", o.pre),
 				fmt.Sprintf("%s%s", o.pre, code),
@@ -327,11 +304,15 @@ func (o *Method) ResponseParam(i int, r *base.Response) {
 // ResponseParams
 // iterate response definitions.
 func (o *Method) ResponseParams() {
+	// Return
+	// if response not defined by annotation.
 	if len(o.method.GetComment().Responses) < 1 {
 		o.templates = append(o.templates, fmt.Sprintf("### %v", i18n.Lang("Response Params")))
 		return
 	}
 
+	// Iterate
+	// response lists.
 	for i, r := range o.method.GetComment().Responses {
 		o.ResponseParam(i, r)
 	}
@@ -464,14 +445,8 @@ func (o *Method) thead(input bool) []string {
 	//   | Field | Type | Description |
 	//   | ----- | ---- | ----------- |
 	return []string{
-		fmt.Sprintf("%s| %v | %v | %v |",
-			o.pre,
-			i18n.Lang("Field"),
-			i18n.Lang("Type"),
-			i18n.Lang("Description"),
-		), fmt.Sprintf("%s| ---- | ---- | ---- |",
-			o.pre,
-		),
+		fmt.Sprintf("%s| %v | %v | %v |", o.pre, i18n.Lang("Field"), i18n.Lang("Type"), i18n.Lang("Description")),
+		fmt.Sprintf("%s| ---- | ---- | ---- |", o.pre),
 	}
 }
 
@@ -492,9 +467,7 @@ func (o *Method) save() {
 	// to markdown files end.
 	o.templates = append(o.templates, "----",
 		strings.Join([]string{
-			fmt.Sprintf("* %s: `%v`", i18n.Lang("Line"), o.method.GetComment().Line),
-			fmt.Sprintf("* %s: `%v`", i18n.Lang("Path"), o.method.GetComment().Path),
-			fmt.Sprintf("* %s: `%s`.`%s`", i18n.Lang("Package"), o.method.GetComment().Pkg, o.method.GetComment().Name),
+			fmt.Sprintf("* %v: `%v`", i18n.Lang("Updated"), o.mapping.GetLastUpdated()),
 		}, o.nl),
 	)
 
