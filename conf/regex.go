@@ -8,28 +8,31 @@ import (
 )
 
 var (
-	// Regex
-	// 正则单例.
 	Regex *RegexManager
 )
 
 type (
+	// RegexManager
+	// register regular expression.
 	RegexManager struct {
 		HiddenFile *regexp.Regexp
 
-		SourceAnnotation                        *regexp.Regexp
-		SourceComment                           *regexp.Regexp
-		SourceController, SourceControllerGroup *regexp.Regexp
-		SourceFile                              *regexp.Regexp
-		SourceMethod                            *regexp.Regexp
-		SourceRoute, SourceRouteMethod          *regexp.Regexp
+		SourceAnnotation, SourceAnnotationSimple *regexp.Regexp
+		SourceComment                            *regexp.Regexp
+		SourceController, SourceControllerGroup  *regexp.Regexp
+		SourceFile                               *regexp.Regexp
+		SourceMethod                             *regexp.Regexp
+		SourceRoute, SourceRouteMethod           *regexp.Regexp
 	}
 )
 
+// Initialize instance field
+// with default regular expressions.
 func (o *RegexManager) init() *RegexManager {
 	o.HiddenFile = regexHiddenFile
 
 	o.SourceAnnotation = regexSourceAnnotation
+	o.SourceAnnotationSimple = regexSourceAnnotationSimple
 	o.SourceComment = regexSourceComment
 	o.SourceController = regexSourceController
 	o.SourceControllerGroup = regexSourceControllerGroup

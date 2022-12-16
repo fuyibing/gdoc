@@ -19,10 +19,17 @@ type (
 	}
 )
 
+// NewReadme
+// create and return instance.
 func NewReadme(mapping base.Mapping) *Readme {
-	return (&Readme{mapping: mapping, templates: make([]string, 0)}).init()
+	return (&Readme{
+		mapping:   mapping,
+		templates: make([]string, 0),
+	}).init()
 }
 
+// Save
+// markdown file to specified directory.
 func (o *Readme) Save() {
 	for _, call := range []func(){
 		o.header,
@@ -35,23 +42,21 @@ func (o *Readme) Save() {
 	}
 }
 
+// /////////////////////////////////////////////////////////////
+// Access methods
+// /////////////////////////////////////////////////////////////
+
 func (o *Readme) deploy() {
-	o.templates = append(o.templates, strings.Join([]string{
+	o.templates = append(o.templates, "----", strings.Join([]string{
 		fmt.Sprintf("* %v: `%v`", i18n.Lang("Deploy Port"), conf.Config.Deploy.Port),
 		fmt.Sprintf("* %v: `%v`", i18n.Lang("Deploy Host"), conf.Config.Deploy.Host),
-		fmt.Sprintf("* %v: `%v`", i18n.Lang("Last Updated"), o.mapping.GetLastUpdated()),
+		fmt.Sprintf("* %v: `%v`", i18n.Lang("Updated"), o.mapping.GetLastUpdated()),
 	}, "\n"))
 }
 
 func (o *Readme) description() {
-	if desc := conf.Config.Description; desc != "" {
-		list := make([]string, 0)
-		for _, s := range strings.Split(desc, "\n") {
-			if s = strings.TrimSpace(s); s != "" {
-				list = append(list, fmt.Sprintf("> %s", s))
-			}
-		}
-		o.templates = append(o.templates, strings.Join(list, "\n"))
+	if str := conf.Config.Description; str != "" {
+		o.templates = append(o.templates, "----", str)
 	}
 }
 
@@ -91,6 +96,9 @@ func (o *Readme) menu() {
 			mm := make(map[string]base.Method)
 
 			for _, m := range c.GetMethods() {
+				if m.GetComment().Ignored {
+					continue
+				}
 				mk := m.GetSortKey()
 				mm[mk] = m
 				ms = append(ms, mk)

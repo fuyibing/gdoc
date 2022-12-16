@@ -4,11 +4,13 @@
 package base
 
 import (
+	"strconv"
 	"strings"
 )
 
 type (
 	Annotation interface {
+		GetBool(d bool) bool
 		GetFirst() string
 		GetName() string
 		GetType() AnnotationType
@@ -30,6 +32,15 @@ func NewAnnotation(name, param string) Annotation {
 		Param: param,
 		Type:  AnnotationType(name),
 	}).init()
+}
+
+func (o *annotation) GetBool(d bool) bool {
+	if s := o.getValue(0); s != "" {
+		if b, be := strconv.ParseBool(s); be == nil {
+			return b
+		}
+	}
+	return d
 }
 
 func (o *annotation) GetFirst() string        { return o.getValue(0) }

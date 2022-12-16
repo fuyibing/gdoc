@@ -18,9 +18,11 @@ type (
 		Pkg  string // sketch/app/controllers
 
 		Errors    []*Error    // Error codes.
+		Ignored   bool        // Ignored status.
 		Headers   []*Header   // Request Header.
 		Request   *Request    // Request params.
 		Responses []*Response // Response list.
+		Version   Annotation  //
 
 		offset int32
 		text   []string
@@ -41,6 +43,9 @@ func (o *Comment) AddAnnotation(a Annotation) {
 	case AnnotationHeader:
 		o.Headers = append(o.Headers, NewHeader(a))
 
+	case AnnotationIgnore:
+		o.Ignored = a.GetBool(true)
+
 	case AnnotationRequest:
 		o.Request = NewRequest(a)
 
@@ -52,6 +57,9 @@ func (o *Comment) AddAnnotation(a Annotation) {
 
 	case AnnotationResponsePaging:
 		o.Responses = append(o.Responses, NewResponse(a, ResponsePaging))
+
+	case AnnotationVersion:
+		o.Version = a
 	}
 }
 
@@ -85,9 +93,9 @@ func (o *Comment) GetTitle() string {
 	return o.Name
 }
 
-func (o *Comment) Ignored() bool {
-	return false
-}
+// func (o *Comment) Ignored() bool {
+// 	return false
+// }
 
 func (o *Comment) init() *Comment {
 	o.Errors = make([]*Error, 0)

@@ -58,7 +58,11 @@ func (o *Adapter) doController(c base.Controller) {
 	// Iterate by sorted.
 	sort.Strings(list)
 	for _, k := range list {
-		o.doMethod(item, maps[k])
+		m := maps[k]
+		if m.GetComment().Ignored {
+			continue
+		}
+		o.doMethod(item, m)
 	}
 
 	// Add to parent.
@@ -70,7 +74,7 @@ func (o *Adapter) doController(c base.Controller) {
 }
 
 func (o *Adapter) doMethod(parent *tpl.Item, m base.Method) {
-	if m.GetComment().Ignored() {
+	if m.GetComment().Ignored {
 		return
 	}
 

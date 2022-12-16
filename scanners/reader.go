@@ -93,7 +93,13 @@ func (o *reader) genComment(line int, code, name string, comment *base.Comment, 
 
 func (o *reader) genCommentParse(comment *base.Comment, controller base.Controller, cs []string) {
 	for _, s := range cs {
-		// Check Annotation.
+		// Annotation simple.
+		if m := conf.Regex.SourceAnnotationSimple.FindStringSubmatch(s); len(m) == 2 {
+			o.genAnnotation(comment, controller, base.NewAnnotation(m[1], ""))
+			continue
+		}
+
+		// Annotation standard.
 		if m := conf.Regex.SourceAnnotation.FindStringSubmatch(s); len(m) == 3 {
 			o.genAnnotation(comment, controller, base.NewAnnotation(m[1], m[2]))
 			continue
