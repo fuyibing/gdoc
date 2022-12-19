@@ -64,7 +64,7 @@ func (o *reflection) Clean() {
 		path = fmt.Sprintf("%s%s%s", conf.Path.GetBasePath(), conf.Path.GetDocumentPath(), conf.Path.GetTmpPath())
 	)
 
-	conf.Debugger.Info("clean begin: %v", path)
+	conf.Debugger.Info("clean begin: %v", strings.TrimPrefix(path, conf.Path.GetBasePath()))
 
 	// Return
 	// if read directory error.
