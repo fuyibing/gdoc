@@ -66,7 +66,7 @@ func (o *PathManager) init() *PathManager {
 	o.basePath, _ = filepath.Abs(".")
 	o.controllerPath = "/app/controllers"
 	o.documentJsonFile = "gdoc.json"
-	o.documentPath = "/docs"
+	o.documentPath = "/docs/api"
 	o.tmpPath = "/.tmp"
 
 	o.directories = make(map[string]bool)
