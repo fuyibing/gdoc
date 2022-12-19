@@ -62,15 +62,18 @@ func main() {
 	scanners.Scanner.Scan()
 
 	// 反射结构.
-	reflectors.New(base.Mapper).
-		Configure().
-		Make()
+	ref := reflectors.New(base.Mapper)
+	ref.Configure()
+	if err := ref.Make(); err != nil {
+		return
+	}
 
 	// 调用适配器.
 	//
 	// 下列调用Markdown适配器, 触发后将把扫描结果与反射结果
 	// 格式化并生成MD文件.
 	markdown.New(base.Mapper).Run()
+	ref.Clean()
 }
 ```
 
