@@ -1,8 +1,11 @@
 // author: wsfuyibing <websearch@163.com>
-// date: 2022-12-16
+// date: 2020-12-16
 
 // Package gdoc
-// generate api document and formatted into target position.
+// generate and formatted as postman.js file, then save to
+// target directory.
 //
-// Adapter allow postman and markdown.
+// Adapter:
+//   Markdown
+//   Postman
 package gdoc
