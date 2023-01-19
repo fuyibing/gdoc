@@ -17,3 +17,7 @@ type Item struct {
 	Value       interface{} `json:"value"`
 	Children    []*Item     `json:"children,omitempty"`
 }
+
+func (o *Item) Hidden() bool {
+	return o.Key == "-"
+}

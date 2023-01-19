@@ -388,6 +388,9 @@ func (o *Method) tbody(input bool, n int, items []*base.Item) []string {
 	// Iterate
 	// items.
 	for _, item := range items {
+		if item.Hidden() {
+			continue
+		}
 		if input {
 			list = append(list, fmt.Sprintf("%s| %v | %v | %v | %v | %v | %v |",
 				o.pre,
